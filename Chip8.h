@@ -20,7 +20,7 @@ class Chip8 {
 
 		// Random Number Generator
 		std::default_random_engine generator;
-		std::uniform_int_distribution<uint8_t> randomBytes;
+		std::uniform_int_distribution<unsigned int> randomBytes;
 		// Function table for instructions indexed by opcode. 1 is added to the highest hex value required by the group of opcodes
 		// when creating the table to be able to index the group by said hex value.
 		typedef void (Chip8::*Chip8Func)();

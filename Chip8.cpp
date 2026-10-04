@@ -33,14 +33,67 @@ Chip8::Chip8() : generator(std::chrono::system_clock::now().time_since_epoch().c
 		memory[FONTSET_START_ADDRESS + i] = fontset[i];
 	}
 	// Init the RNG values
-	randomBytes = std::uniform_int_distribution<uint8_t>(0u, 255u);
+	randomBytes = std::uniform_int_distribution<unsigned int>(0, 255);
 	// Set up the function pointer table
 	masterTable[0x0] = &Chip8::Table0;
+	masterTable[0x1] = &Chip8::JMP;
+	//masterTable[0x2] = &Chip8::CALL;
+	//masterTable[0x3] = &Chip8::SE;
+	//masterTable[0x4] = &Chip8::SNE;
+	//masterTable[0x5] = &Chip8::SE_Vy;
+	masterTable[0x6] = &Chip8::LD_Vx;
+	masterTable[0x7] = &Chip8::ADD_Vx;
+	masterTable[0x8] = &Chip8::Table8;
+	//masterTable[0x9] = &Chip8::SNE_Vy;
+	masterTable[0xA] = &Chip8::LD_I;
+	//masterTable[0xB] = &Chip8::JMP_V0;
+	//masterTable[0xC] = &Chip8::RND;
+	masterTable[0xD] = &Chip8::DRW;
+	masterTable[0xE] = &Chip8::TableE;
+	masterTable[0xF] = &Chip8::TableF;
+	// Set up the auxiliary tables
+	for (size_t i = 0; i <= 0xE; i++)
+	{
+		table0[i] = &Chip8::No_Op;
+		table8[i] = &Chip8::No_Op;
+		tableE[i] = &Chip8::No_Op;
+	}
+
+	table0[0x0] = &Chip8::CLS;
+	//table0[0xE] = &Chip8::RET;
+
+	//table8[0x0] = &Chip8::LD_Vx_Vy;
+	//table8[0x1] = &Chip8::OR_Vx_Vy;
+	//table8[0x2] = &Chip8::AND_Vx_Vy;
+	//table8[0x3] = &Chip8::XOR_Vx_Vy;
+	//table8[0x4] = &Chip8::ADD_Vx_Vy;
+	//table8[0x5] = &Chip8::SUB_Vx_Vy;
+	//table8[0x6] = &Chip8::SHR_Vx;
+	//table8[0x7] = &Chip8::SUBN_Vx_Vy;
+	//table8[0xE] = &Chip8::SHL_Vx;
+
+	//tableE[0x1] = &Chip8::SKNP
+	//tableE[0xE] = &Chip8::SKP
+
+	for (size_t i = 0; i <= 0x65; i++)
+	{
+		tableF[i] = &Chip8::No_Op;
+	}
+
+	//tableF[0x07] = &Chip8::LD_Vx_DT;
+	//tableF[0x0A] = &Chip8::LD_Vx_K;
+	//tableF[0x15] = &Chip8::LD_DT_Vx;
+	//tableF[0x18] = &Chip8::LD_ST_Vx;
+	//tableF[0x1E] = &Chip8::ADD_I_Vx;
+	//tableF[0x29] = &Chip8::LD_F_Vx;
+	//tableF[0x33] = &Chip8::LD_B_Vx;
+	//tableF[0x55] = &Chip8::LD_I_V0_Vx;
+	//tableF[0x65] = &Chip8::LD_V0_Vx_I;
 }
 
 void Chip8::LoadROM(char const* filename) {
 	// Open the file as a binary stream and move the file pointer to the end
-	std::ifstream file(filename, std::ios::binary, std::ios::ate);
+	std::ifstream file(filename, std::ios::binary | std::ios::ate);
 
 	if (file.is_open()) {
 		// Get the size of the file
