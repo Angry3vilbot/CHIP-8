@@ -57,4 +57,14 @@ class Chip8 {
 		void ADD_Vx();
 		void LD_I();
 		void DRW();
+		void CALL();
+		void RET();
+		void SKP();
+		void SKNP();
+		void SE();
+		void SNE();
+		void SE_Vy();
+		void SNE_Vy();
+		void JMP_V0();
+		void RND();
 };

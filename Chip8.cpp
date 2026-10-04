@@ -37,17 +37,17 @@ Chip8::Chip8() : generator(std::chrono::system_clock::now().time_since_epoch().c
 	// Set up the function pointer table
 	masterTable[0x0] = &Chip8::Table0;
 	masterTable[0x1] = &Chip8::JMP;
-	//masterTable[0x2] = &Chip8::CALL;
-	//masterTable[0x3] = &Chip8::SE;
-	//masterTable[0x4] = &Chip8::SNE;
-	//masterTable[0x5] = &Chip8::SE_Vy;
+	masterTable[0x2] = &Chip8::CALL;
+	masterTable[0x3] = &Chip8::SE;
+	masterTable[0x4] = &Chip8::SNE;
+	masterTable[0x5] = &Chip8::SE_Vy;
 	masterTable[0x6] = &Chip8::LD_Vx;
 	masterTable[0x7] = &Chip8::ADD_Vx;
 	masterTable[0x8] = &Chip8::Table8;
-	//masterTable[0x9] = &Chip8::SNE_Vy;
+	masterTable[0x9] = &Chip8::SNE_Vy;
 	masterTable[0xA] = &Chip8::LD_I;
-	//masterTable[0xB] = &Chip8::JMP_V0;
-	//masterTable[0xC] = &Chip8::RND;
+	masterTable[0xB] = &Chip8::JMP_V0;
+	masterTable[0xC] = &Chip8::RND;
 	masterTable[0xD] = &Chip8::DRW;
 	masterTable[0xE] = &Chip8::TableE;
 	masterTable[0xF] = &Chip8::TableF;
@@ -60,7 +60,7 @@ Chip8::Chip8() : generator(std::chrono::system_clock::now().time_since_epoch().c
 	}
 
 	table0[0x0] = &Chip8::CLS;
-	//table0[0xE] = &Chip8::RET;
+	table0[0xE] = &Chip8::RET;
 
 	//table8[0x0] = &Chip8::LD_Vx_Vy;
 	//table8[0x1] = &Chip8::OR_Vx_Vy;
@@ -72,8 +72,8 @@ Chip8::Chip8() : generator(std::chrono::system_clock::now().time_since_epoch().c
 	//table8[0x7] = &Chip8::SUBN_Vx_Vy;
 	//table8[0xE] = &Chip8::SHL_Vx;
 
-	//tableE[0x1] = &Chip8::SKNP
-	//tableE[0xE] = &Chip8::SKP
+	tableE[0x1] = &Chip8::SKNP;
+	tableE[0xE] = &Chip8::SKP;
 
 	for (size_t i = 0; i <= 0x65; i++)
 	{
@@ -215,6 +215,126 @@ void Chip8::DRW() {
 		// If the edge of the screen is reached, stop drawing (sprites do not wrap around the edge, only the coordinates do)
 		if (row + yCoord == 31u) break;
 	}
+}
+// Call subroutine at NNN
+void Chip8::CALL() {
+	// Increment the stack pointer
+	SP++;
+	// Put the current program counter onto the stack
+	stack[SP] = PC;
+	// Set the program counter to the subroutine's address (NNN)
+	PC = opcode & 0x0FFFu;
+}
+// Return to the last call site on the stack
+void Chip8::RET() {
+	// Set the program counter to the address in the stack at the stack pointer
+	PC = stack[SP];
+	// Decrement the stack pointer
+	SP--;
+}
+// Skip the next instruction if the key with the value of Vx is pressed
+void Chip8::SKP() {
+	// Extract the index of the register (x)
+	uint8_t registerIndex = (opcode & 0x0F00u) >> 8u;
+	// Extract the stored value of the register
+	uint8_t keyValue = registers[registerIndex];
+	// Check if the key is pressed
+	if (keypad[keyValue] == 1) {
+		// Skip the next instruction by incrementing the PC by 2
+		PC += 2;
+	}
+}
+// Skip the next instruction if the key with the value of Vx is NOT pressed
+void Chip8::SKNP() {
+	// Extract the index of the register (x)
+	uint8_t registerIndex = (opcode & 0x0F00u) >> 8u;
+	// Extract the stored value of the register
+	uint8_t keyValue = registers[registerIndex];
+	// Check if the key stored in Vx is NOT pressed
+	if (keypad[keyValue] != 1) {
+		// Skip the next instruction by incrementing the PC by 2
+		PC += 2;
+	}
+}
+// Skip the next instruction if the value of Vx equals NN
+void Chip8::SE() {
+	// Extract the index of the register (x)
+	uint8_t registerIndex = (opcode & 0x0F00u) >> 8u;
+	// Extract the stored value of the register
+	uint8_t value = registers[registerIndex];
+	// Extract NN
+	uint8_t checkVal = opcode & 0x00FFu;
+	// Check if the value stored in Vx is equal to NN
+	if (value == checkVal) {
+		// Skip the next instruction by incrementing the PC by 2
+		PC += 2;
+	}
+}
+// Skip the next instruction if the value of Vx does NOT equal NN
+void Chip8::SNE() {
+	// Extract the index of the register (x)
+	uint8_t registerIndex = (opcode & 0x0F00u) >> 8u;
+	// Extract the stored value of the register
+	uint8_t value = registers[registerIndex];
+	// Extract NN
+	uint8_t checkVal = opcode & 0x00FFu;
+	// Check if the value stored in Vx does NOT equal NN
+	if (value != checkVal) {
+		// Skip the next instruction by incrementing the PC by 2
+		PC += 2;
+	}
+}
+// Skip the next instruction if the value of Vx equals the value of Vy
+void Chip8::SE_Vy() {
+	// Extract the index of the register (x)
+	uint8_t registerIndexX = (opcode & 0x0F00u) >> 8u;
+	// Extract the index of the register (y)
+	uint8_t registerIndexY = (opcode & 0x00F0u) >> 4u;
+	// Extract the stored value of the register (x)
+	uint8_t valueX = registers[registerIndexX];
+	// Extract the stored value of the register (y)
+	uint8_t valueY = registers[registerIndexY];
+	// Check if the value stored in Vx is equal to the value of Vy
+	if (valueX == valueY) {
+		// Skip the next instruction by incrementing the PC by 2
+		PC += 2;
+	}
+}
+// Skip the next instruction if the value of Vx does NOT equal the value of Vy
+void Chip8::SNE_Vy() {
+	// Extract the index of the register (x)
+	uint8_t registerIndexX = (opcode & 0x0F00u) >> 8u;
+	// Extract the index of the register (y)
+	uint8_t registerIndexY = (opcode & 0x00F0u) >> 4u;
+	// Extract the stored value of the register (x)
+	uint8_t valueX = registers[registerIndexX];
+	// Extract the stored value of the register (y)
+	uint8_t valueY = registers[registerIndexY];
+	// Check if the value stored in Vx does NOT equal the value of Vy
+	if (valueX != valueY) {
+		// Skip the next instruction by incrementing the PC by 2
+		PC += 2;
+	}
+}
+// Jump to the memory address NNN plus the offset in V0
+void Chip8::JMP_V0() {
+	// Extract the address NNN
+	uint16_t baseAddress = opcode & 0x0FFFu;
+	// Extract the offset from V0
+	uint8_t offset = registers[0x0];
+	// Calculate the final memory address
+	uint16_t address = baseAddress + offset;
+	// Set the program counter to the address
+	PC = address;
+}
+// Get a random byte, AND it with NN and put the result in Vx
+void Chip8::RND() {
+	// Extract the index of the register (x)
+	uint8_t registerIndex = (opcode & 0x0F00u) >> 8u;
+	// Extract NN
+	uint8_t byte = opcode & 0x00FFu;
+	// Calculate and store the result in the register (x)
+	registers[registerIndex] = randomBytes(generator) & byte;
 }
 
 //#endregion
